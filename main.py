@@ -5,20 +5,47 @@ from streamlit_folium import st_folium
 
 st.title("Netherlands Provinces Map")
 
+# Maak de map
 m = folium.Map(
     location=[52.1326, 5.2913],
     zoom_start=7
 )
 
-with open("the-netherlands.geojson", "r", encoding="utf-8") as f:    geojson_data = json.load(f)
+#Open goejson
+with open("the-netherlands.geojson", "r", encoding="utf-8") as f:
+    geojson_data = json.load(f)
 
-# Province layer ekle
-folium.GeoJson(
+# Province layer
+geojson = folium.GeoJson(
     geojson_data,
+    name="Netherlands Provinces",
+    style_function=lambda feature: {
+        "fillColor": "blue",
+        "color": "black",
+        "weight": 1,
+        "fillOpacity": 0.3,
+    },
+    highlight_function=lambda feature: {
+        "fillColor": "orange",
+        "color": "red",
+        "weight": 3,
+        "fillOpacity": 0.7,
+    },
     tooltip=folium.GeoJsonTooltip(
         fields=["name"],
         aliases=["Province:"]
     )
-).add_to(m)
+)
 
-st_folium(m, width=700, height=500)
+#Map
+geojson.add_to(m)
+
+# Streamlit map
+output = st_folium(
+    m,
+    width=700,
+    height=500
+)
+
+#Output
+st.write(output)
