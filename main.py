@@ -3,7 +3,7 @@ import folium
 import json
 from streamlit_folium import st_folium
 
-st.title("Netherlands Provinces Map")
+st.title("NWeather App")
 
 # Maak de map
 m = folium.Map(
