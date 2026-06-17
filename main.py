@@ -12,10 +12,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# 1. Styling voor betere uitzicht
+# 1. Styling voor betere uitzicht (Geüpdatet voor mooiere sidebar-weergave)
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -49,19 +49,38 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
     color: #fff !important;
 }
 
-section[data-testid="stSidebar"] div[data-testid="stAlert"] {
-    background: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(126,200,227,0.3) !important;
-    border-radius: 10px !important;
-    color: #7ec8e3 !important;
+/* Grote custom kaart voor het huidige weer-status */
+.sidebar-weather-status {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(126, 200, 227, 0.4);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff !important;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
 }
 
-section[data-testid="stSidebar"] div[data-testid="column"] {
-    background: rgba(255,255,255,0.07);
+/* Grotere en duidelijkere statistieken onderin de sidebar */
+.sidebar-stat-card {
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 10px;
-    padding: 8px 4px;
-    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
+}
+.sidebar-stat-label {
+    font-size: 13px;
+    color: #7ec8e3 !important;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.sidebar-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff !important;
 }
 
 .weather-card {
@@ -117,11 +136,32 @@ div[data-testid="stVerticalBlock"] > div:has(iframe) {
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Data & Provincie mappen
+# 2. Nederlandse vertalingen voor weersomstandigheden
+WEATHER_TRANSLATIONS = {
+    "Patchy rain nearby": "Lokale regenbuien in de buurt",
+    "Patchy rain possible": "Kans op lokale regen",
+    "Sunny": "Heerlijk zonnig",
+    "Partly cloudy": "Licht bewolkt",
+    "Cloudy": "Bewolkt",
+    "Overcast": "Geheel bewolkt",
+    "Clear": "Helder",
+    "Mist": "Mistig",
+    "Fog": "Dichte mist",
+    "Light rain": "Lichte regen",
+    "Moderate rain": "Matige regen",
+    "Heavy rain": "Zware regenval",
+    "Patchy snow nearby": "Kans op natte sneeuw",
+    "Thundery outbreaks nearby": "Onweer in de buurt",
+    "Light drizzle": "Lichte motregen",
+    "Light rain shower": "Lichte regenbui"
+}
+
+
 @st.cache_data
 def load_geojson():
     with open("the-netherlands.geojson", "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 geojson_data = load_geojson()
 province_list = sorted([f["properties"]["name"] for f in geojson_data["features"]])
@@ -141,10 +181,11 @@ PROVINCE_CITY_MAP = {
     "Limburg": ["Maastricht", "Venlo", "Roermond", "Sittard", "Weert", "Heerlen"]
 }
 
-# 3. Weer functies
+
 async def get_weather(city):
     async with python_weather.Client(unit=python_weather.METRIC) as client:
         return await client.get(city)
+
 
 def run_async(coro):
     try:
@@ -157,29 +198,27 @@ def run_async(coro):
         pass
     return asyncio.run(coro)
 
-# 4. Session State initialisatie (voor het onthouden van de klik)
+
 if "selected_province" not in st.session_state:
     st.session_state.selected_province = None
 
-# Callback functie wanneer de selectbox handmatig wordt aangepast
+
 def on_selectbox_change():
     st.session_state.selected_province = st.session_state.province_box
 
-# Zijbalk Titel & Tijd
+
 st.sidebar.title("🗺️ Provincies")
 
 amsterdam_tz = pytz.timezone("Europe/Amsterdam")
 now = datetime.now(amsterdam_tz)
-dagen_nl = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"]
+dagen_nl = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"]
 st.sidebar.markdown(f"### 🕒 {dagen_nl[now.weekday()]} {now.strftime('%H:%M')}")
 st.sidebar.markdown("---")
 
-#Bepaal de huidige index voor de selectbox op basis van de session_state
 default_index = None
 if st.session_state.selected_province in province_list:
     default_index = province_list.index(st.session_state.selected_province)
 
-# Selectbox gekoppeld aan de session_state
 selected_province = st.sidebar.selectbox(
     "🔍 Zoek provincie",
     options=province_list,
@@ -189,11 +228,9 @@ selected_province = st.sidebar.selectbox(
     on_change=on_selectbox_change
 )
 
-# Update de state als de selectbox gebruikt is
 if selected_province:
     st.session_state.selected_province = selected_province
 
-# Stad kiezen binnen de regio
 selected_city = None
 if st.session_state.selected_province:
     cities = PROVINCE_CITY_MAP.get(st.session_state.selected_province, [])
@@ -203,7 +240,7 @@ if st.session_state.selected_province:
         index=0
     )
 
-# 5. Landkaart styling & opstarten
+
 def style_function(feature):
     name = feature["properties"]["name"]
     match = st.session_state.selected_province and st.session_state.selected_province.lower() == name.lower()
@@ -213,6 +250,7 @@ def style_function(feature):
         "weight": 2 if match else 1,
         "fillOpacity": 0.6 if match else 0.3,
     }
+
 
 m = folium.Map(location=[52.2130, 5.2794], zoom_start=7)
 
@@ -228,19 +266,15 @@ folium.GeoJson(
     tooltip=folium.GeoJsonTooltip(fields=["name"])
 ).add_to(m)
 
-# Toon de kaart
 output = st_folium(m, height=500, use_container_width=True)
 
-# 6. KLIK DETECTIE (Runt direct na de kaart-interactie)
 if output and output.get("last_active_drawing"):
     clicked_province = output["last_active_drawing"]["properties"]["name"]
-    # Als er op een nieuwe provincie is geklikt, update de state en herlaad de pagina direct
     if clicked_province != st.session_state.selected_province:
         st.session_state.selected_province = clicked_province
         st.rerun()
 
-# 7. Weergegevens tonen
-dagen_kort_nl = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"]
+dagen_kort_nl = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"]
 
 if st.session_state.selected_province and selected_city:
     try:
@@ -248,37 +282,44 @@ if st.session_state.selected_province and selected_city:
         forecasts = list(weather.daily_forecasts)
 
         st.sidebar.markdown(f"## 📍 {st.session_state.selected_province} — {selected_city}")
-        st.sidebar.info(weather.description)
+
+        # Vertaal de Engelse omschrijving naar het Nederlands
+        eng_desc = weather.description
+        nl_desc = WEATHER_TRANSLATIONS.get(eng_desc, eng_desc)
+
+        # Prachtige grote weergave van de huidige status
+        st.sidebar.markdown(f'<div class="sidebar-weather-status">⛅ {nl_desc}</div>', unsafe_allow_html=True)
 
         st.sidebar.markdown("## 🌤️ Vandaag weer")
 
+        # Nieuwe grotere kolommen in de sidebar
         col1, col2, col3 = st.sidebar.columns(3)
         col1.markdown(f"""
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:gray;">🌡️ Temp</div>
-            <div style="font-size:16px;font-weight:600;color:#1f2a44;">{weather.temperature}°C</div>
+        <div class="sidebar-stat-card">
+            <div class="sidebar-stat-label">🌡️ Temp</div>
+            <div class="sidebar-stat-value">{weather.temperature}°C</div>
         </div>
         """, unsafe_allow_html=True)
 
         col2.markdown(f"""
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:gray;">💧 Vocht</div>
-            <div style="font-size:16px;font-weight:600;color:#1f2a44;">{weather.humidity}%</div>
+        <div class="sidebar-stat-card">
+            <div class="sidebar-stat-label">💧 Vocht</div>
+            <div class="sidebar-stat-value">{weather.humidity}%</div>
         </div>
         """, unsafe_allow_html=True)
 
         col3.markdown(f"""
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:gray;">💨 Wind</div>
-            <div style="font-size:16px;font-weight:600;color:#1f2a44;">{weather.wind_speed} km/h</div>
+        <div class="sidebar-stat-card">
+            <div class="sidebar-stat-label">💨 Wind</div>
+            <div class="sidebar-stat-value">{weather.wind_speed} <span style="font-size:11px;">km/h</span></div>
         </div>
         """, unsafe_allow_html=True)
 
+        st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
         if forecasts:
             vandaag = forecasts[0]
-            st.sidebar.success("VANDAAG")
-            st.sidebar.write(f"⬆️ Max: {vandaag.highest_temperature}°C")
-            st.sidebar.write(f"⬇️ Min: {vandaag.lowest_temperature}°C")
+            st.sidebar.success(f"📈 Max: {vandaag.highest_temperature}°C  |  📉 Min: {vandaag.lowest_temperature}°C")
 
         st.markdown("## 📅 Komende dagen")
         future = forecasts[1:4]
